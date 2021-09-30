@@ -5,10 +5,47 @@ class MoviesController < ApplicationController
     @movie = Movie.find(id) # look up movie by unique ID
     # will render app/views/movies/show.<extension> by default
   end
-
+  
   def index
-    @movies = Movie.order(params[:sort]) 
+    
+    @url = request.original_url
+    if ! (@url =~ /movies/)
+      session.clear
+    end
+    
+    # @is_checked=true
+    # if !params[:ratings].nil? 
+    #   @is_checked = params[:ratings].include? rating
+    # end
+    
+    if params[:ratings].nil? && params[:sort].nil? && (!session[:ratings].nil? || !session[:sort].nil?)
+      params[:ratings] = session[:ratings]
+      params[:sort] = session[:sort]
+    end
+    
+    
+    if params[:ratings].nil? && params[:sort].nil?
+      @movies = Movie.all
+      session[:ratings] = nil
+      session[:sort] = nil
+    elsif params[:ratings].nil?
+      @movies = Movie.order(params[:sort]) 
+      session[:ratings] = nil
+      session[:sort] = params[:sort]
+    elsif params[:sort].nil?
+      @params_ratings = params[:ratings]
+      @movies = Movie.where("rating IN (?)",@params_ratings.keys)
+      session[:sort] = nil
+      session[:ratings] = params[:ratings]
+    else
+      @params_ratings = params[:ratings]
+      @movies = Movie.where("rating IN (?)",@params_ratings.keys).order(params[:sort])
+      session[:sort] = params[:sort]
+      session[:ratings] = params[:ratings]
+    end
+    
     @sort_column = params[:sort]
+    
     if params[:sort] == "title"
       @text_class_title = "text-success"
     else
@@ -19,7 +56,9 @@ class MoviesController < ApplicationController
     else
       @text_class = "text-primary"
     end
-    #debugger
+    
+    @all_ratings = Movie.ratings
+    
   end
 
   def new
